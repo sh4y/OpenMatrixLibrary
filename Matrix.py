@@ -1,4 +1,9 @@
 from Exceptions import *
+from scipy import misc, ndimage, stats
+from skimage import data, feature
+import skimage as sk
+import matplotlib.pyplot as plt
+
 class Matrix:
     def __init__(self, row, col):
         "Initialization of Matrix type."
@@ -86,4 +91,64 @@ class Matrix:
             raise IllegalDimensionSize("Cannot get determinant of non NxN matrix.");
         print(self.determinantWrapper(self.matrix) == 0);
 
-    
+    import numpy as np
+
+def convolution_1d(matrix, filter):
+    filtered_matrix = np.zeros((matrix.shape[0], matrix.shape[1]))
+    for x in range(matrix.shape[0]):
+        for y in range(matrix.shape[1]-1):
+            sum = 0
+            for i in range (filter.shape[0]):
+                for j in range (filter.shape[1]):
+                    sum += matrix[x][y+j] * filter[i][j]
+            filtered_matrix[x][y] = sum
+            if y == matrix.shape[1] - 2:
+                filtered_matrix[x][y+1] = matrix[x][y+1]
+    return filtered_matrix
+
+
+def convolution(matrix, filter):
+    #flip filter
+    filter = np.flip(filter, axis=0)
+    filter = np.flip(filter, axis=1)
+    print filter.shape
+    print matrix.shape
+
+    if filter.shape[1] % 2 == 0:
+        return convolution_1d(matrix, filter)
+
+    #gather shape/dimensions
+    rows = matrix.shape[0]
+    cols = matrix.shape[1]
+    #first zero pad the matrix, but only if filter is of odd length
+    start_index = 0 # by default, non padded matrices will start at 0,0
+    col_end_index = cols  # same logic for end index
+    row_end_index = rows
+    if filter.shape[0] % 2 == 1:
+        matrix = np.pad(matrix, pad_width=1, mode='constant', constant_values=0)
+        start_index = 1 # if zero padded, then start index is going to be 1,1
+        col_end_index += 1
+        row_end_index += 1
+    filtered_matrix = np.zeros((rows, cols))
+    for x in range (start_index, col_end_index):
+        for y in range (start_index, row_end_index):
+            #calculate filter math
+            sum = 0
+            for i in range(filter.shape[0]):
+                for j in range(filter.shape[1]):
+                    #print 'Matrix value: ' + str(matrix[x-i+start_index][y+j-1])
+                    #print 'filter value: ' + str(filter[i][j])
+                    sum += np.multiply(matrix[x-i+start_index][y+j-1],filter[i][j])
+            filtered_matrix[x-start_index][y-start_index] = sum
+    return filtered_matrix
+
+def convolution_3d(matrix, filter):
+    filtered_matrix = np.ones((matrix.shape[0], matrix.shape[1]))
+    for i in range(matrix.shape[2]):
+        #strip each matrix and filter channel
+        channel = matrix[:, :, i]
+        channel_filter = filter[:, :, i]
+        #perform convolution for each channel
+        filtered_channel = convolution(channel, channel_filter)
+        filtered_matrix = np.multiply(filtered_matrix, filtered_channel)
+    return filtered_matrix
