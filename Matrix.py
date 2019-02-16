@@ -152,3 +152,54 @@ def convolution_3d(matrix, filter):
         filtered_channel = convolution(channel, channel_filter)
         filtered_matrix = np.multiply(filtered_matrix, filtered_channel)
     return filtered_matrix
+
+def isotropic_gaussian(sig, flen=3):
+    x = np.linspace(- 3. * sig, 3. * sig, flen)
+    num = np.exp(-(x**2) / 2. * sig**2)
+    dem = 1 / (2. * np.pi * sig**2)
+    filter = np.reshape(num * dem, (flen,1))
+    filter2d = np.multiply(filter.T, filter)
+    filter2d = filter2d / np.sum(filter2d)
+    filter2d = filter2d.reshape((flen,flen))
+    return filter2d
+
+def get_image_array(file):
+    arr = sk.color.rgba2rgb(misc.imread(file))  # 640x480x3 array
+    return np.array(arr)
+
+def convolve_image(file):
+    arr = get_image_array(file)
+    filter = isotropic_gaussian(1.0)
+    filter = filter.reshape(filter.shape[0], filter.shape[1], 1)
+    filtered_image = ndimage.convolve(arr, filter)
+
+    plt.axis('off')
+    plt.imshow(filtered_image)
+    plt.show()
+
+def compute_gradient(X):
+    horizontal_gradient = np.gradient(X, axis=0)
+    vertical_gradient = np.gradient(X, axis=1)
+    magnitude_matrix = np.sqrt(horizontal_gradient ** 2 + vertical_gradient ** 2)
+    #print magnitude_matrix.sum()
+    return horizontal_gradient, vertical_gradient, magnitude_matrix
+
+def show_gradient(grad):
+    img = plt.imshow(grad, cmap='grey')
+    plt.show()
+
+def match_template(img, template, rgb_image):
+    match = feature.match_template(img, template)
+    ij = np.unravel_index(np.argmax(match), match.shape)
+    x, y = ij[::-1]
+    w, h = template.shape
+    fig, ax = plt.subplots(1)
+    rect = plt.Rectangle((x, y), h, w, edgecolor='r', facecolor='none')
+    ax.add_patch(rect)
+    ax.imshow(match)
+    plt.show()
+    plt.axis('off')
+    rect = plt.Rectangle((x, y), h, w, edgecolor='r', facecolor='none')
+    ax.add_patch(rect)
+    ax.imshow(rgb_image,)
+    plt.show()
