@@ -1,0 +1,105 @@
+import numpy as np
+from scipy import misc, ndimage, stats
+from skimage import data, feature
+import skimage as sk
+import matplotlib.pyplot as plt
+
+def round(x, base=45):
+    return np.array( base * np.round(np.array(x) / base)).astype(int)
+
+def canny(img):
+    gaussian_filter = isotropic_gaussian(1.)
+    smoothed_image = ndimage.convolve(img, gaussian_filter)
+    h_grad, v_grad, magnitude = compute_gradient(smoothed_image)
+    theta = np.abs(round(np.arctan2(v_grad, h_grad) * np.round((180 / np.pi))))
+    print magnitude.shape
+    for x in range(magnitude.shape[0]):
+        for y in range (magnitude.shape[1]):
+            #print x,y
+            if theta[x][y] == 0:
+                #handle edge case where pixel is at the end
+                if y == magnitude.shape[1] - 1:
+                    #check if magnitude is greater than the pixel on the left
+                    if magnitude[x][y] < magnitude[x][y-1]:
+                        magnitude[x][y] = 0
+                elif y == 0:
+                    #check if magnitude is greater than the pixel on the right
+                    if magnitude[x][y] < magnitude[x][y+1]:
+                        magnitude[x][y] = 0
+                else:  #regular case
+                    if magnitude[x][y] < magnitude[x][y+1] or magnitude[x][y] < magnitude[x][y-1]:
+                        magnitude[x][y] = 0
+            elif theta[x][y] == 45:
+                #northeast/southwest pixels
+                #handle corner cases
+                if x == 0:
+                    if y == 0:
+                        pass
+                    else:
+                        #handle bottom left pixel only
+                        if magnitude[x][y] < magnitude[x - 1][y - 1]:
+                            magnitude[x][y] = 0
+                elif x == magnitude.shape[0]-1:
+                    if y == magnitude.shape[0]-1:
+                        pass
+                    else:
+                        #handle top right pixel only
+                        if magnitude[x][y] < magnitude[x + 1][y + 1]:
+                            magnitude[x][y] = 0
+                elif y == 0:
+                    #only top right cases
+                    if magnitude[x][y] < magnitude[x - 1][y + 1]:
+                        magnitude[x][y] = 0
+                elif y == magnitude.shape[1]-1:
+                    #only bottom left cases
+                    if magnitude[x][y] < magnitude[x - 1][y - 1]:
+                        magnitude[x][y] = 0
+                else:
+                    if magnitude[x][y] < magnitude[x - 1][y + 1] or magnitude[x][y] < magnitude[x + 1][y - 1]:
+                        magnitude[x][y] = 0
+            elif theta[x][y] == 90:
+                #handle pixel at topmost/bottommost row
+                if x == 0: #topmost
+                    if magnitude[x][y] < magnitude[x+1][y]:
+                        magnitude[x][y] = 0
+                elif x == magnitude.shape[0] - 1: #bottommost
+                    if magnitude[x][y] < magnitude[x-1][y]:
+                        magnitude[x][y] = 0
+                else:
+                    if magnitude[x][y] < magnitude[x+1][y] or magnitude[x][y] < magnitude[x-1][y]:
+                        magnitude[x][y] = 0
+            elif theta[x][y] == 135:
+                #northwest/southeast
+                if x == 0:
+                    if y == 0:
+                        pass
+                    else:
+                        #handle bottom right pixel only
+                        if magnitude[x][y] < magnitude[x + 1][y + 1]:
+                            magnitude[x][y] = 0
+                elif x == magnitude.shape[0]-1:
+                    if y == magnitude.shape[0]-1:
+                        pass
+                    else:
+                        #handle top left pixel only
+                        if magnitude[x][y] < magnitude[x - 1][y - 1]:
+                            magnitude[x][y] = 0
+                elif y == 0:
+                    #only bottom right cases
+                    if magnitude[x][y] < magnitude[x + 1][y + 1]:
+                        magnitude[x][y] = 0
+                elif y == magnitude.shape[1]-1:
+                    #only top left cases
+                    if magnitude[x][y] < magnitude[x - 1][y - 1]:
+                        magnitude[x][y] = 0
+                else:
+                    if magnitude[x][y] < magnitude[x - 1][y - 1] or magnitude[x][y] < magnitude[x + 1][y + 1]:
+                        magnitude[x][y] = 0
+    return magnitude
+
+
+
+rgbWaldo = get_image_array('C:\Users\haksh\Documents\CSC420\Assignment1\AI\waldo.png')
+rgbTemplate = get_image_array('C:\Users\haksh\Documents\CSC420\Assignment1\AI\\template.png')
+greyWaldo = sk.color.rgb2gray(rgbWaldo)
+greyTemplate = sk.color.rgb2gray(rgbTemplate)
